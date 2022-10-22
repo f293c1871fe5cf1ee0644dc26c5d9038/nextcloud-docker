@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+    reverse-proxy:
+        build:
+            context: ./nginx
+            args:
+                HOST: $HOST
+                CERTIFICATE_DURATION: $CERTIFICATE_DURATION
+                DNS1: $DNS1
+                DNS2: $DNS2
+        ports:
+            - 80:80
+            - 443:443
+
+    database:
+        image: mariadb:10.9.3-jammy
+        command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+        volumes:
+            - ~volumes/mariadb:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=nextcloud
+
+    cloud:
+        image: nextcloud:25.0.0-apache
+        depends_on:
+            - reverse-proxy
+            - database
+        volumes:
+            - ~volumes/nextcloud:/var/www/html
+        environment:
+            - MYSQL_USER=root
+            - MYSQL_PASSWORD=root
+            - MYSQL_DATABASE=nextcloud
+            - MYSQL_HOST=database
+        expose:
+            - 80
